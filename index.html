@@ -5,15 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>NexaSearch - Terminal de Treinamento de IA</title>
     <style>
-        /* ================= 1. 核心变量体系 (严格的色彩与间距规范) ================= */
+        /* ================= 1. 核心变量体系 ================= */
         :root {
-            /* 深邃底色体系 */
             --bg-base: #050505;
             --bg-panel: rgba(24, 24, 27, 0.6);
             --bg-panel-solid: #18181B;
             --bg-card: #09090B;
             
-            /* 品牌核心色 */
             --brand-orange: #FF6B00;
             --brand-orange-glow: rgba(255, 107, 0, 0.35);
             --brand-cyan: #00E5FF;
@@ -21,19 +19,16 @@
             --brand-green-glow: rgba(16, 185, 129, 0.3);
             --brand-red: #F43F5E;
             
-            /* 文本灰度层级 */
             --text-100: #FFFFFF;
             --text-200: #E4E4E7;
             --text-300: #A1A1AA;
             --text-400: #71717A;
             
-            /* UI 边框与模糊 */
             --border-light: rgba(255, 255, 255, 0.08);
             --border-strong: rgba(255, 255, 255, 0.15);
             --blur-md: blur(12px);
             --blur-lg: blur(24px);
             
-            /* 圆角系统 */
             --radius-sm: 8px;
             --radius-md: 16px;
             --radius-lg: 24px;
@@ -62,7 +57,6 @@
             padding-bottom: 120px;
         }
 
-        /* 动态环境光效 */
         .ambient-mesh {
             position: fixed; inset: 0; z-index: 0; pointer-events: none;
             background: 
@@ -210,7 +204,7 @@
         .rule-step { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 28px;}
         .step-num { font-size: 28px; font-weight: 900; color: transparent; -webkit-text-stroke: 1.5px var(--text-400); font-style: italic; line-height: 1; flex-shrink: 0;}
         .step-text h4 { font-size: 16px; color: var(--text-100); margin-bottom: 6px; font-weight: 800;}
-        .step-text p { font-size: 13px; color: var(--text-400); line-height: 1.6;}
+        .step-text p { font-size: 14px; color: var(--text-400); line-height: 1.6;}
 
         .footer-area { padding: 32px 24px 40px; text-align: center; border-top: 1px solid var(--border-light); position: relative; z-index: 1;}
         
@@ -263,6 +257,29 @@
         }
         .dock-btn:active { transform: scale(0.96); }
 
+        /* ================= 10. 模态框样式 ================= */
+        .modal-overlay {
+            position: fixed; inset: 0; 
+            background: rgba(0, 0, 0, 0.8); backdrop-filter: var(--blur-md); -webkit-backdrop-filter: var(--blur-md);
+            z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease; padding: 24px;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: all; }
+        .modal-card {
+            background: var(--bg-panel-solid); width: 100%; max-width: 320px; border-radius: var(--radius-lg);
+            padding: 32px 24px; text-align: center; border: 1px solid var(--border-strong);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.6);
+            transform: scale(0.95) translateY(10px); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-overlay.active .modal-card { transform: scale(1) translateY(0); }
+        .btn-close {
+            margin-top: 24px; width: 100%; padding: 14px; border-radius: 12px; 
+            background: rgba(255,255,255,0.1); color: #fff; border: none; 
+            font-weight: 700; cursor: pointer; transition: 0.2s;
+        }
+        .btn-close:active { background: rgba(255,255,255,0.15); transform: scale(0.96); }
+
+        /* 纯代码 SVG 金币符号通用类 */
         .coin-icon { width: 1.2em; height: 1.2em; vertical-align: -0.2em; flex-shrink: 0;}
     </style>
 </head>
@@ -271,9 +288,7 @@
 <svg width="0" height="0" style="display:none;">
     <symbol id="coin-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="10"></circle>
-        <path d="M12 8v8"></path>
-        <path d="M9 10h6"></path>
-        <path d="M9 14h6"></path>
+        <circle cx="12" cy="12" r="4" fill="currentColor"></circle>
     </symbol>
 </svg>
 
@@ -326,7 +341,7 @@
 
         <button class="execute-btn" id="terminalBtn" onclick="runTerminalTask()">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
-            Aceitar Missão (+15 NEXA)
+            Aceitar Missão (+15)
         </button>
 
         <div class="progress-track" id="taskProgress">
@@ -445,9 +460,26 @@
             <div class="scarcity-tag">VAGAS BETA RESTANTES: <span id="spots-left">14</span>/500</div>
         </div>
 
-        <button class="dock-btn" onclick="alert('O canal de registro Beta está em preparação. Por favor, mantenha esta página aberta!')">
+        <button class="dock-btn" onclick="openLoadingModal()">
             Criar Meu Nó de Validação
         </button>
+    </div>
+
+    <div class="modal-overlay" id="loadingModal">
+        <div class="modal-card">
+            <div id="modalLoadingState">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--brand-orange)" stroke-width="2" style="animation: spin 1s linear infinite; margin: 0 auto 16px;"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+                <h3 style="font-size: 18px; color: var(--text-100); margin-bottom: 8px;">Carregando...</h3>
+                <p style="font-size: 13px; color: var(--text-400);">Estabelecendo conexão segura com o servidor de nós.</p>
+            </div>
+            
+            <div id="modalErrorState" style="display: none;">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--brand-red)" stroke-width="2" style="margin: 0 auto 16px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <h3 style="font-size: 18px; color: var(--text-100); margin-bottom: 8px;">Falha ao carregar</h3>
+                <p style="font-size: 14px; color: var(--text-300);">O sistema está enfrentando um alto volume de acessos no momento. Por favor, tente novamente mais tarde.</p>
+                <button class="btn-close" onclick="closeLoadingModal()">Fechar</button>
+            </div>
+        </div>
     </div>
 
 </div>
@@ -458,7 +490,9 @@
         if ("vibrate" in navigator) navigator.vibrate(duration);
     }
 
-    // 2. 实时弹幕逻辑
+    // ==========================================
+    // 🔥 修改点：实时弹幕，去除单位，仅显示金额
+    // ==========================================
     const tickerBox = document.getElementById('liveTickerBox');
     const tickerText = document.getElementById('liveTickerText');
     const phonePrefixes = ['11', '21', '31', '41', '51', '61', '71', '81', '91'];
@@ -469,7 +503,7 @@
         const suffix = Math.floor(1000 + Math.random() * 9000);
         const amount = payoutAmounts[Math.floor(Math.random() * payoutAmounts.length)];
         
-        tickerText.innerHTML = `[Sistema] Nó ${prefix}****${suffix} resgatou <b><svg class="coin-icon" style="width:14px; height:14px; color:var(--brand-green);"><use href="#coin-svg"></use></svg> ${amount} NEXA</b>`;
+        tickerText.innerHTML = `[Sistema] Nó ${prefix}****${suffix} resgatou <b><svg class="coin-icon" style="width:14px; height:14px; color:var(--brand-green);"><use href="#coin-svg"></use></svg> ${amount}</b>`;
         tickerBox.classList.add('show');
 
         setTimeout(() => { tickerBox.classList.remove('show'); }, 3500);
@@ -574,7 +608,34 @@
     }
     document.head.insertAdjacentHTML('beforeend', '<style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>');
 
-    // 6. 统计数字加载动画
+    // ==========================================
+    // 🔥 新增：底部按钮触发的 Loading 弹窗逻辑
+    // ==========================================
+    function openLoadingModal() {
+        triggerHaptic(30);
+        const modal = document.getElementById('loadingModal');
+        const loadingState = document.getElementById('modalLoadingState');
+        const errorState = document.getElementById('modalErrorState');
+        
+        // 重置状态为 Loading
+        loadingState.style.display = 'block';
+        errorState.style.display = 'none';
+        modal.classList.add('active');
+
+        // 3.5 秒后显示失败
+        setTimeout(() => {
+            loadingState.style.display = 'none';
+            errorState.style.display = 'block';
+            triggerHaptic([30, 50, 30]); // 失败时的强烈震动
+        }, 3500);
+    }
+
+    function closeLoadingModal() {
+        triggerHaptic(20);
+        document.getElementById('loadingModal').classList.remove('active');
+    }
+
+    // 7. 统计数字加载动画
     function animateValue(id, start, end, duration, formatFn) {
         const obj = document.getElementById(id);
         let startTimestamp = null;
